@@ -8,7 +8,7 @@ function Video() {
   return (
     <div className="flex flex-col float-left ml-10 lg:flex-row">
       <Playvideo videoId={videoId} />
-      <Recommend />
+      <Recommend categoryId={categoryId} videoId={videoId} />
     </div>
   );
 }

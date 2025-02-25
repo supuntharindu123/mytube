@@ -8,9 +8,12 @@ import Jack from "../assets/assets/jack.png";
 import User_profile from "../assets/assets/user_profile.jpg";
 import { Api_key, value_converter } from "../data";
 import moment from "moment";
+import { useParams } from "react-router-dom";
 
 function Playvideo({ videoId }) {
   const [apiData, setApiData] = useState(null);
+  const [channeldata, setChannelData] = useState(null);
+  const [commentData, setCommentData] = useState([]);
 
   const fetchData = async () => {
     const videodata = ` https://youtube.googleapis.com/youtube/v3/videos?part=snippet%2CcontentDetails%2Cstatistics&id=${videoId}&key=${Api_key}`;
@@ -19,9 +22,28 @@ function Playvideo({ videoId }) {
       .then((data) => setApiData(data.items[0]));
   };
 
+  const fetchChannelData = async () => {
+    const channel = `https://youtube.googleapis.com/youtube/v3/channels?part=snippet%2CcontentDetails%2Cstatistics&id=${apiData.snippet.channelId}&key=${Api_key}`;
+    await fetch(channel)
+      .then((res) => res.json())
+      .then((data) => setChannelData(data.items[0]));
+  };
+
+  const fetchcommentData = async () => {
+    const comments = `https://youtube.googleapis.com/youtube/v3/commentThreads?part=snippet%2Creplies&videoId=${videoId}&key=${Api_key}`;
+    await fetch(comments)
+      .then((res) => res.json())
+      .then((data) => setCommentData(data.items));
+  };
+
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [videoId]);
+
+  useEffect(() => {
+    fetchChannelData();
+    fetchcommentData();
+  }, [apiData]);
   return (
     <div className="max-w-6xl p-4 mx-auto">
       {/* <video
@@ -65,12 +87,21 @@ function Playvideo({ videoId }) {
       </div>
       <hr className="my-4" />
       <div className="flex items-center gap-4">
-        <img src={Jack} alt="Jack" className="w-10 h-10 rounded-full" />
+        <img
+          src={channeldata ? channeldata.snippet.thumbnails.default.url : ""}
+          alt="Jack"
+          className="w-10 h-10 rounded-full"
+        />
         <div>
           <h3 className="text-lg font-semibold">
             {apiData ? apiData.snippet.channelTitle : ""}
           </h3>
-          <p className="text-sm text-gray-500">1M Subscribers</p>
+          <p className="text-sm text-gray-500">
+            {value_converter(
+              channeldata ? channeldata.statistics.subscriberCount : ""
+            )}{" "}
+            Subscribers
+          </p>
         </div>
 
         <button className="px-4 py-1 ml-5 text-lg bg-red-700 rounded text-slate-100">
@@ -88,28 +119,47 @@ function Playvideo({ videoId }) {
         {apiData ? value_converter(apiData.statistics.commentCount) : ""}{" "}
         Comments
       </h4>
-      {[...Array(3)].map((_, i) => (
-        <div key={i} className="flex gap-4 mt-4">
-          <img
-            src={User_profile}
-            alt="User"
-            className="w-10 h-10 rounded-full"
-          />
-          <div>
-            <h3 className="text-lg font-semibold">
-              Jack Nicolment{" "}
-              <span className="text-sm text-gray-500">1 day ago</span>
-            </h3>
-            <p className="text-xl">This is a great video for web development</p>
-            <div className="flex items-center gap-2 mt-2">
-              <img src={Like} alt="Like" className="w-4" />
-              <span className="text-sm">234</span>
-              <img src={Dislike} alt="Dislike" className="w-4" />
-              <span className="text-sm">31</span>
+      {commentData.map((data, index) => {
+        return (
+          <div key={index} className="flex gap-4 mt-4">
+            <img
+              src={
+                data
+                  ? data.snippet.topLevelComment.snippet.authorProfileImageUrl
+                  : ""
+              }
+              alt="User"
+              className="w-10 h-10 rounded-full"
+            />
+            <div>
+              <h3 className="text-lg font-semibold">
+                {data
+                  ? data.snippet.topLevelComment.snippet.authorDisplayName
+                  : ""}{" "}
+                &nbsp; &nbsp;
+                <span className="text-sm text-gray-500">
+                  {data
+                    ? moment(
+                        data.snippet.topLevelComment.snippet.publishedAt
+                      ).fromNow()
+                    : ""}
+                </span>
+              </h3>
+              <p className="text-xl">
+                {data ? data.snippet.topLevelComment.snippet.textDisplay : ""}
+              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <img src={Like} alt="Like" className="w-4" />
+                <span className="text-sm">
+                  {data ? data.snippet.topLevelComment.snippet.likeCount : ""}
+                </span>
+                <img src={Dislike} alt="Dislike" className="w-4" />
+                <span className="text-sm"></span>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
